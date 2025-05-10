@@ -1,0 +1,3 @@
+/Users/bishwa/Desktop/Fluid/build/CMakeFiles/FluidSimulation.dir
+/Users/bishwa/Desktop/Fluid/build/CMakeFiles/edit_cache.dir
+/Users/bishwa/Desktop/Fluid/build/CMakeFiles/rebuild_cache.dir

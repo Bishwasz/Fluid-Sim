@@ -1,0 +1,26 @@
+[
+{
+  "directory": "/Users/bishwa/Desktop/Fluid/build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -F/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks -isystem /opt/homebrew/include -g -std=gnu++17 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -o CMakeFiles/FluidSimulation.dir/main.cpp.o -c /Users/bishwa/Desktop/Fluid/main.cpp",
+  "file": "/Users/bishwa/Desktop/Fluid/main.cpp",
+  "output": "CMakeFiles/FluidSimulation.dir/main.cpp.o"
+},
+{
+  "directory": "/Users/bishwa/Desktop/Fluid/build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -F/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks -isystem /opt/homebrew/include -g -std=gnu++17 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -o CMakeFiles/FluidSimulation.dir/fluid.cpp.o -c /Users/bishwa/Desktop/Fluid/fluid.cpp",
+  "file": "/Users/bishwa/Desktop/Fluid/fluid.cpp",
+  "output": "CMakeFiles/FluidSimulation.dir/fluid.cpp.o"
+},
+{
+  "directory": "/Users/bishwa/Desktop/Fluid/build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -F/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks -isystem /opt/homebrew/include -g -std=gnu++17 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -o CMakeFiles/FluidSimulation.dir/render.cpp.o -c /Users/bishwa/Desktop/Fluid/render.cpp",
+  "file": "/Users/bishwa/Desktop/Fluid/render.cpp",
+  "output": "CMakeFiles/FluidSimulation.dir/render.cpp.o"
+},
+{
+  "directory": "/Users/bishwa/Desktop/Fluid/build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -F/Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/System/Library/Frameworks -isystem /opt/homebrew/include -g -std=gnu++17 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk -o CMakeFiles/FluidSimulation.dir/utils.cpp.o -c /Users/bishwa/Desktop/Fluid/utils.cpp",
+  "file": "/Users/bishwa/Desktop/Fluid/utils.cpp",
+  "output": "CMakeFiles/FluidSimulation.dir/utils.cpp.o"
+}
+]
