@@ -1,7 +1,9 @@
 #include "fluid.hpp"
 #include "utils.hpp"
+#include <emscripten.h> // Added for emscripten_get_now
 #include <algorithm>
 #include <cmath>
+#include <cstdio> // Added for printf
 
 // Simulation parameters
 float dt = 0.01f;
@@ -22,22 +24,18 @@ void initFluid() {
 }
 
 void add_fixed_circular_source(std::vector<float>& dens_prev, 
-    std::vector<float>& u_prev, 
-    std::vector<float>& v_prev, 
-    float dt, float simulationTime) {
+                              std::vector<float>& u_prev, 
+                              std::vector<float>& v_prev, 
+                              float dt, float simulationTime) {
     float centerX = N * 0.5f + 1.0f;
     float centerY = N * 0.5f + 1.0f;
     float radius = 5.0f;
     float maxDensity = 500.0f;
 
     // Velocity parameters
-    float velocityStrength = 50.0f; // Strength of the velocity field
-    // float velocityDirection = 3.0f; // Direction in radians (0 = right, PI/2 = up)
-            // You can change this or make it change over time
-
-    // Calculate velocity components
+    float velocityStrength = 50.0f;
     float rotationSpeed = 0.5f;
-    float velocityDirection = fmod(simulationTime * rotationSpeed, 2.0f * M_PI);  // Rotates over time
+    float velocityDirection = fmod(simulationTime * rotationSpeed, 2.0f * M_PI);
 
     float velocityX = velocityStrength * std::cos(velocityDirection);
     float velocityY = velocityStrength * std::sin(velocityDirection);
@@ -53,14 +51,9 @@ void add_fixed_circular_source(std::vector<float>& dens_prev,
             float dy = (j - centerY);
             float distance = std::sqrt(dx * dx + dy * dy);
             if (distance <= radius) {
-                // float falloff = std::exp(-distance * distance / (radius * radius));
-
-                // Add density
-                dens_prev[IX(i,j)] += maxDensity * 1 * dt;
-
-                // Add velocity with the same falloff pattern
-                u_prev[IX(i,j)] += velocityX * 1 * dt;
-                v_prev[IX(i,j)] += velocityY * 1 * dt;
+                dens_prev[IX(i,j)] += maxDensity * dt;
+                u_prev[IX(i,j)] += velocityX * dt;
+                v_prev[IX(i,j)] += velocityY * dt;
             }
         }
     }
@@ -160,6 +153,7 @@ void vel_step(std::vector<float>& u, std::vector<float>& v,
     advect(2, v, v0, u, v, dt);
     project(u, v, u0, v0);
 }
+
 float simulationTime = 0.0f;
 void updateFluid(float dt) {
     simulationTime += dt;

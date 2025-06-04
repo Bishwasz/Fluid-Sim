@@ -1,8 +1,7 @@
 #include "utils.hpp"
-#include <GL/glew.h>
-#include <algorithm>
-#include <iostream>
 #include "fluid.hpp"
+#include <algorithm>
+#include <cstdio> // Added for potential future logging
 
 void SWAP(std::vector<float>& x0, std::vector<float>& x) {
     std::swap(x0, x);
@@ -24,12 +23,5 @@ void set_bnd(int b, std::vector<float>& x) {
 void add_source(std::vector<float>& x, std::vector<float>& s, float dt) {
     for (int i = 0; i < SIZE; i++) {
         x[i] += dt * s[i];
-    }
-}
-
-void checkGLError(const std::string& place) {
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR) {
-        std::cerr << "OpenGL error at " << place << ": " << error << std::endl;
     }
 }

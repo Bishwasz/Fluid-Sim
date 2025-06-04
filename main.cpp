@@ -1,59 +1,53 @@
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#include <GLES3/gl3.h> // Use GLES3 for WebGL 2.0
 #include <iostream>
 #include "fluid.hpp"
 #include "render.hpp"
 
+EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context;
+
+void main_loop() {
+    static double lastTime = emscripten_get_now() / 1000.0;
+    double currentTime = emscripten_get_now() / 1000.0;
+    double frameTime = currentTime - lastTime;
+    lastTime = currentTime;
+
+    float adjustedDt = std::min(dt, float(frameTime * 5.0));
+    updateFluid(adjustedDt);
+    updateVBO();
+    render();
+
+    checkGLError("main loop");
+}
+
 int main() {
-    if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
+    // Initialize WebGL context
+    EmscriptenWebGLContextAttributes attrs;
+    emscripten_webgl_init_context_attributes(&attrs);
+    attrs.majorVersion = 2; // WebGL 2.0
+    attrs.minorVersion = 0;
+    context = emscripten_webgl_create_context("#canvas", &attrs);
+    if (context <= 0) {
+        printf("Failed to create WebGL context\n");
         return -1;
     }
+    emscripten_webgl_make_context_current(context);
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    #ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    #endif
-
-    GLFWwindow* window = glfwCreateWindow(800, 800, "Fluid Simulation", NULL, NULL);
-    if (!window) {
-        glfwTerminate();
-        std::cerr << "Failed to create GLFW window" << std::endl;
-        return -1;
-    }
-
-    glfwMakeContextCurrent(window);
-
+    // Initialize OpenGL
     if (!initGL()) {
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        std::cerr << "Failed to initialize OpenGL" << std::endl;
+        printf("Failed to initialize OpenGL\n");
         return -1;
     }
 
+    // Initialize fluid simulation
     initFluid();
-    setupInputCallbacks(window);
 
-    double lastTime = glfwGetTime();
-    while (!glfwWindowShouldClose(window)) {
-        double currentTime = glfwGetTime();
-        double frameTime = currentTime - lastTime;
-        lastTime = currentTime;
+    // Set up input callbacks (handled in render.cpp via Emscripten APIs)
+    setupInputCallbacks();
 
-        float adjustedDt = std::min(dt, float(frameTime * 5.0));
-        updateFluid(adjustedDt);
-        updateVBO();
-        render();
+    // Set up the main loop
+    emscripten_set_main_loop(main_loop, 0, 1);
 
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-        checkGLError("main loop");
-    }
-
-    cleanupGL();
-    glfwDestroyWindow(window);
-    glfwTerminate();
     return 0;
 }

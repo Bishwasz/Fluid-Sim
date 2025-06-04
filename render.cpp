@@ -1,8 +1,11 @@
 #include "render.hpp"
 #include "fluid.hpp"
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#include <GLES3/gl3.h>
 #include <vector>
-#include <iostream>
 #include <algorithm>
+#include <cstdio>
 
 // OpenGL variables
 GLuint vao, vbo, ebo, shaderProgram;
@@ -11,9 +14,10 @@ GLint posAttrib, colorAttrib;
 bool isDragging = false;
 double startX, startY;
 
-// Shader sources
+// Shader sources (modified for WebGL 2.0)
 const char* vertexShaderSource = R"(
-    #version 330 core
+    #version 300 es
+    precision highp float;
     layout(location = 0) in vec2 position;
     layout(location = 1) in vec3 color;
     out vec3 fragColor;
@@ -24,7 +28,8 @@ const char* vertexShaderSource = R"(
 )";
 
 const char* fragmentShaderSource = R"(
-    #version 330 core
+    #version 300 es
+    precision highp float;
     in vec3 fragColor;
     out vec4 outColor;
     void main() {
@@ -40,19 +45,13 @@ bool compileShader(GLuint shader, const char* source) {
     if (!success) {
         GLchar infoLog[512];
         glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        std::cerr << "Shader compilation error: " << infoLog << std::endl;
+        printf("Shader compilation error: %s\n", infoLog);
         return false;
     }
     return true;
 }
 
 bool initGL() {
-    GLenum glewStatus = glewInit();
-    if (glewStatus != GLEW_OK) {
-        std::cerr << "Failed to initialize GLEW: " << glewGetErrorString(glewStatus) << std::endl;
-        return false;
-    }
-    
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     if (!compileShader(vertexShader, vertexShaderSource)) {
@@ -68,14 +67,14 @@ bool initGL() {
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    glLinkProgram/shaderProgram);
 
     GLint success;
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if (!success) {
         GLchar infoLog[512];
         glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cerr << "Shader program linking error: " << infoLog << std::endl;
+        printf("Shader program linking error: %s\n", infoLog);
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
         return false;
@@ -98,6 +97,7 @@ void cleanupGL() {
 }
 
 void updateVBO() {
+    // Same as original, no changes needed for WebGL 2.0
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
     float scale = 2.0f / N;
@@ -176,64 +176,68 @@ bool isValidGridCell(int i, int j) {
     return (i >= 1 && i <= N && j >= 1 && j <= N);
 }
 
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_RIGHT) {
-        if (action == GLFW_PRESS) {
-            isDragging = true;  // Start dragging
-            double xpos, ypos;
-            glfwGetCursorPos(window, &xpos, &ypos);
-            startX = xpos;
-            startY = ypos;
-        } else if (action == GLFW_RELEASE) {
-            isDragging = false; // End dragging
+EMSCRIPTEN_KEEPALIVE
+void mouse_button_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData) {
+    if (mouseEvent->button == 0) { // Left button
+        if (eventType == EMSCRIPTEN_EVENT_MOUSEDOWN) {
+            isDragging = true;
+            startX = mouseEvent->targetX;
+            startY = mouseEvent->targetY;
+        } else if (eventType == EMSCRIPTEN_EVENT_MOUSEUP) {
+            isDragging = false;
         }
     }
 }
 
-void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
-    static double lastX = xpos, lastY = ypos;
+EMSCRIPTEN_KEEPALIVE
+void cursor_pos_callback(int eventType, const EmscriptenMouseEvent* mouseEvent, void* userData) {
+    static double lastX = mouseEvent->targetX, lastY = mouseEvent->targetY;
     static bool firstMove = true;
 
     if (firstMove) {
         firstMove = false;
-        lastX = xpos;
-        lastY = ypos;
+        lastX = mouseEvent->targetX;
+        lastY = mouseEvent->targetY;
         return;
     }
 
     int width, height;
-    glfwGetWindowSize(window, &width, &height);
+    emscripten_get_canvas_element_size("#canvas", &width, &height);
 
-    int i = (int)((xpos / width) * N) + 1;
-    int j = (int)(((height - ypos) / height) * N) + 1;
+    int i = (int)((mouseEvent->targetX / (float)width) * N) + 1;
+    int j = (int)(((height - mouseEvent->targetY) / (float)height) * N) + 1;
 
     if (isDragging && isValidGridCell(i, j)) {
+        float velX = (mouseEvent->targetX - lastX) * 0.3f;
+        float velY = (lastY - mouseEvent->targetY) * 0.3f;
+        velX = std::min(std::max(velX, -10.0f), 10.0f);
+        velY = std::min(std::max(velY, -10.0f), 10.0f);
 
-            float velX = (xpos - lastX) * 0.3f;
-            float velY = (lastY - ypos) * 0.3f;
-            velX = std::min(std::max(velX, -10.0f), 10.0f);
-            velY = std::min(std::max(velY, -10.0f), 10.0f);
-
-            // Apply velocity and density change in the surrounding cells
-            for (int di = -2; di <= 2; di++) {
-                for (int dj = -2; dj <= 2; dj++) {
-                    if (isValidGridCell(i + di, j + dj)) {
-                        float factor = std::max(0.0f, 1.0f - 0.05f * (abs(di) + abs(dj)));
-                        u_prev[IX(i + di, j + dj)] += velX * 10 * factor;
-                        v_prev[IX(i + di, j + dj)] += velY * 10 * factor;
-                        dens_prev[IX(i + di, j + dj)] += 60.0f * factor;
-                    }
+        for (int di = -2; di <= 2; di++) {
+            for (int dj = -2; dj <= 2; dj++) {
+                if (isValidGridCell(i + di, j + dj)) {
+                    float factor = std::max(0.0f, 1.0f - 0.05f * (abs(di) + abs(dj)));
+                    u_prev[IX(i + di, j + dj)] += velX * 10 * factor;
+                    v_prev[IX(i + di, j + dj)] += velY * 10 * factor;
+                    dens_prev[IX(i + di, j + dj)] += 60.0f * factor;
                 }
-            
+            }
         }
     }
 
-    lastX = xpos;
-    lastY = ypos;
+    lastX = mouseEvent->targetX;
+    lastY = mouseEvent->targetY;
 }
 
+void setupInputCallbacks() {
+    emscripten_set_mousedown_callback("#canvas", NULL, true, mouse_button_callback);
+    emscripten_set_mouseup_callback("#canvas", NULL, true, mouse_button_callback);
+    emscripten_set_mousemove_callback("#canvas", NULL, true, cursor_pos_callback);
+}
 
-void setupInputCallbacks(GLFWwindow* window) {
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetCursorPosCallback(window, cursor_pos_callback);
+void checkGLError(const std::string& place) {
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        printf("OpenGL error at %s: %d\n", place.c_str(), err);
+    }
 }

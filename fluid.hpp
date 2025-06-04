@@ -18,7 +18,10 @@ extern std::vector<float> dens, dens_prev;
 
 void initFluid();
 void updateFluid(float dt);
-void add_fixed_circular_source(std::vector<float>& dens_prev, float dt);
+void add_fixed_circular_source(std::vector<float>& dens_prev, 
+                              std::vector<float>& u_prev, 
+                              std::vector<float>& v_prev, 
+                              float dt, float simulationTime);
 void vel_step(std::vector<float>& u, std::vector<float>& v,
               std::vector<float>& u0, std::vector<float>& v0, float visc, float dt);
 void dens_step(std::vector<float>& x, std::vector<float>& x0,
