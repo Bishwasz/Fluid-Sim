@@ -8,6 +8,9 @@
 GLuint vao, vbo, ebo, shaderProgram;
 GLint posAttrib, colorAttrib;
 
+bool isDragging = false;
+double startX, startY;
+
 // Shader sources
 const char* vertexShaderSource = R"(
     #version 330 core
@@ -174,24 +177,15 @@ bool isValidGridCell(int i, int j) {
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        double xpos, ypos;
-        glfwGetCursorPos(window, &xpos, &ypos);
-        int width, height;
-        glfwGetWindowSize(window, &width, &height);
-
-        int i = (int)((xpos / width) * N) + 1;
-        int j = (int)(((height - ypos) / height) * N) + 1;
-
-        if (isValidGridCell(i, j)) {
-            dens_prev[IX(i,j)] = 100.0f;
-            for (int di = -1; di <= 1; di++) {
-                for (int dj = -1; dj <= 1; dj++) {
-                    if (isValidGridCell(i+di, j+dj)) {
-                        dens_prev[IX(i+di, j+dj)] += 60.0f * (1.0f - 0.3f * (abs(di) + abs(dj)));
-                    }
-                }
-            }
+    if (button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_RIGHT) {
+        if (action == GLFW_PRESS) {
+            isDragging = true;  // Start dragging
+            double xpos, ypos;
+            glfwGetCursorPos(window, &xpos, &ypos);
+            startX = xpos;
+            startY = ypos;
+        } else if (action == GLFW_RELEASE) {
+            isDragging = false; // End dragging
         }
     }
 }
@@ -213,27 +207,31 @@ void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
     int i = (int)((xpos / width) * N) + 1;
     int j = (int)(((height - ypos) / height) * N) + 1;
 
-    if (isValidGridCell(i, j) && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
-        float velX = (xpos - lastX) * 0.3f;
-        float velY = (lastY - ypos) * 0.3f;
-        velX = std::min(std::max(velX, -10.0f), 10.0f);
-        velY = std::min(std::max(velY, -10.0f), 10.0f);
+    if (isDragging && isValidGridCell(i, j)) {
 
-        for (int di = -2; di <= 2; di++) {
-            for (int dj = -2; dj <= 2; dj++) {
-                if (isValidGridCell(i+di, j+dj)) {
-                    float factor = std::max(0.0f, 1.0f - 0.05f * (abs(di) + abs(dj)));
-                    u_prev[IX(i+di, j+dj)] += velX * 10 * factor;
-                    v_prev[IX(i+di, j+dj)] += velY * 10 * factor;
-                    dens_prev[IX(i+di, j+dj)] += 50.0f * factor;
+            float velX = (xpos - lastX) * 0.3f;
+            float velY = (lastY - ypos) * 0.3f;
+            velX = std::min(std::max(velX, -10.0f), 10.0f);
+            velY = std::min(std::max(velY, -10.0f), 10.0f);
+
+            // Apply velocity and density change in the surrounding cells
+            for (int di = -2; di <= 2; di++) {
+                for (int dj = -2; dj <= 2; dj++) {
+                    if (isValidGridCell(i + di, j + dj)) {
+                        float factor = std::max(0.0f, 1.0f - 0.05f * (abs(di) + abs(dj)));
+                        u_prev[IX(i + di, j + dj)] += velX * 10 * factor;
+                        v_prev[IX(i + di, j + dj)] += velY * 10 * factor;
+                        dens_prev[IX(i + di, j + dj)] += 60.0f * factor;
+                    }
                 }
-            }
+            
         }
     }
 
     lastX = xpos;
     lastY = ypos;
 }
+
 
 void setupInputCallbacks(GLFWwindow* window) {
     glfwSetMouseButtonCallback(window, mouse_button_callback);

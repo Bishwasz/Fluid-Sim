@@ -6,7 +6,7 @@
 // Simulation parameters
 float dt = 0.01f;
 float diff = 0.0001f;
-float visc = 0.0001f;
+float visc = 0.001f;
 
 // Fluid data
 std::vector<float> u(SIZE), v(SIZE), u_prev(SIZE), v_prev(SIZE);
@@ -21,11 +21,26 @@ void initFluid() {
     std::fill(dens_prev.begin(), dens_prev.end(), 0.0f);
 }
 
-void add_fixed_circular_source(std::vector<float>& dens_prev, float dt) {
+void add_fixed_circular_source(std::vector<float>& dens_prev, 
+    std::vector<float>& u_prev, 
+    std::vector<float>& v_prev, 
+    float dt, float simulationTime) {
     float centerX = N * 0.5f + 1.0f;
     float centerY = N * 0.5f + 1.0f;
     float radius = 5.0f;
-    float maxDensity = 100.0f;
+    float maxDensity = 500.0f;
+
+    // Velocity parameters
+    float velocityStrength = 50.0f; // Strength of the velocity field
+    // float velocityDirection = 3.0f; // Direction in radians (0 = right, PI/2 = up)
+            // You can change this or make it change over time
+
+    // Calculate velocity components
+    float rotationSpeed = 0.5f;
+    float velocityDirection = fmod(simulationTime * rotationSpeed, 2.0f * M_PI);  // Rotates over time
+
+    float velocityX = velocityStrength * std::cos(velocityDirection);
+    float velocityY = velocityStrength * std::sin(velocityDirection);
 
     int minI = std::max(1, static_cast<int>(centerX - radius));
     int maxI = std::min(N, static_cast<int>(centerX + radius));
@@ -38,8 +53,14 @@ void add_fixed_circular_source(std::vector<float>& dens_prev, float dt) {
             float dy = (j - centerY);
             float distance = std::sqrt(dx * dx + dy * dy);
             if (distance <= radius) {
-                float falloff = std::exp(-distance * distance / (radius * radius));
-                dens_prev[IX(i,j)] += maxDensity * falloff * dt;
+                // float falloff = std::exp(-distance * distance / (radius * radius));
+
+                // Add density
+                dens_prev[IX(i,j)] += maxDensity * 1 * dt;
+
+                // Add velocity with the same falloff pattern
+                u_prev[IX(i,j)] += velocityX * 1 * dt;
+                v_prev[IX(i,j)] += velocityY * 1 * dt;
             }
         }
     }
@@ -139,9 +160,10 @@ void vel_step(std::vector<float>& u, std::vector<float>& v,
     advect(2, v, v0, u, v, dt);
     project(u, v, u0, v0);
 }
-
+float simulationTime = 0.0f;
 void updateFluid(float dt) {
-    add_fixed_circular_source(dens_prev, dt);
+    simulationTime += dt;
+    add_fixed_circular_source(dens_prev, u_prev, v_prev, dt, simulationTime);
     vel_step(u, v, u_prev, v_prev, visc, dt);
     dens_step(dens, dens_prev, u, v, diff, dt);
     std::fill(u_prev.begin(), u_prev.end(), 0.0f);
